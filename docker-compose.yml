@@ -11,7 +11,7 @@ services:
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong(!)Password -Q 'SELECT 1'"]
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Batman751995!@# -Q 'SELECT 1'"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -24,10 +24,10 @@ services:
       dockerfile: Dockerfile
     container_name: funds_api_service
     environment:
-      - ConnectionStrings__DefaultConnection=Server=sql-server,1433;Database=WalletFundsDB;User Id=sa;Password=YourStrong(!)Password;TrustServerCertificate=true;
+      - ConnectionStrings__DefaultConnection=Server=sql-server,1433;Database=WalletFundsDB;User Id=sa;Password=Batman751995!@#;TrustServerCertificate=true;
       - RiskService__BaseUrl=http://risk-service:8000
     ports:
-      - "5000:80"
+      - "5282:8080"
     depends_on:
       sql-server:
         condition: service_healthy

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using FundsApi.Data; 
 using FundsApi.Hubs; // Προσθήκη για το SignalR
+using FundsApi.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,8 @@ builder.Services.AddSignalR();    // Διορθώνει το σφάλμα του
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<WalletDbContext>(options => 
     options.UseSqlServer(connectionString));
-
+// Register the IdempotencyFilter in the DI container
+builder.Services.AddScoped<IdempotencyFilter>(); 
 var app = builder.Build();
 
 // ============================================================
@@ -30,6 +32,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
 
 //app.UseHttpsRedirection();
 

@@ -163,3 +163,4 @@ C:\Users\Michael\source\repos\Horizon\services\funds-api\obj\Debug\net10.0\refin
 C:\Users\Michael\source\repos\Horizon\services\funds-api\obj\Debug\net10.0\Horizon.Funds.Api.pdb
 C:\Users\Michael\source\repos\Horizon\services\funds-api\obj\Debug\net10.0\Horizon.Funds.Api.genruntimeconfig.cache
 C:\Users\Michael\source\repos\Horizon\services\funds-api\obj\Debug\net10.0\ref\Horizon.Funds.Api.dll
+C:\Users\Michael\source\repos\Horizon\services\funds-api\obj\Debug\net10.0\Horizon.Funds.Api.sourcelink.json

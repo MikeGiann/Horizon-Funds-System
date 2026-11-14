@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Horizon.Funds.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1c0e61eab125be687448a160807a05d8ad291989")]
 [assembly: System.Reflection.AssemblyProductAttribute("Horizon.Funds.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Horizon.Funds.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

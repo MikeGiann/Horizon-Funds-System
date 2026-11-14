@@ -41,38 +41,87 @@ namespace FundsApi.Controllers
 
 
         [HttpPost("newDeposit")]
-        [ServiceFilter(typeof(IdempotencyFilter))] // Keeping  filter for security
+        [ServiceFilter(typeof(IdempotencyFilter))]
         public async Task<ActionResult> NewDeposit([FromBody] TransactionRequest request)
         {
-            var wallet = await _context.Wallets.FindAsync(request.WalletId);
-            if (wallet == null) return NotFound("Wallet not found.");
-            var transaction = new TransactionEvent {
-                WalletId = wallet.Id,
-                Amount = request.Amount,
-                Type = "Deposit",
-                IdempotencyKey = HttpContext.Request.Headers["X-Idempotency-Key"],
-                Timestamp = DateTime.UtcNow
-            };
+            // 1. Validation: Prevent negative or zero amounts to avoid balance manipulation
+            if (request.Amount <= 0) 
+                return BadRequest("Deposit amount must be greater than zero.");
 
-            _context.Transactions.Add(transaction);
-            wallet.AvailableFunds += transaction.Amount;
+            // Using a transaction to ensure atomicity between the transaction log and balance update
+            using var transactionScope = await _context.Database.BeginTransactionAsync();
 
-            await _context.SaveChangesAsync();
-
-            // SignalR Notification
-            await _hubContext.Clients.Group(wallet.AccountNumber).SendAsync("TransactionProcessed", new
+            try 
             {
-                WalletId = wallet.Id,
-                AccountNumber = wallet.AccountNumber,
-                Amount = request.Amount,
-                NewBalance = wallet.AvailableFunds,
-                Timestamp = transaction.Timestamp
-            });
+                // 2. Concurrency Handling: Retrieve the wallet. 
+                // In a high-scale production environment, we would implement Optimistic Concurrency 
+                // using a RowVersion/Timestamp or a pessimistic lock (SELECT FOR UPDATE).
+                var wallet = await _context.Wallets.FindAsync(request.WalletId);
+                if (wallet == null) return NotFound("Wallet not found.");
 
-            return Ok(new { Message = "Deposit successful.", NewBalance = wallet.AvailableFunds });
+                var transactionEvent = new TransactionEvent {
+                    WalletId = wallet.Id,
+                    Amount = request.Amount,
+                    Type = "Deposit",
+                    IdempotencyKey = HttpContext.Request.Headers["X-Idempotency-Key"],
+                    Timestamp = DateTime.UtcNow
+                };
+
+                _context.Transactions.Add(transactionEvent);
+                
+                // 3. Atomic Balance Update
+                wallet.AvailableFunds += transactionEvent.Amount;
+
+                await _context.SaveChangesAsync();
+                await transactionScope.CommitAsync(); // Commit the transaction to ensure data integrity
+
+                // 4. SignalR Notification: Triggered outside the transaction scope to optimize latency
+                await _hubContext.Clients.Group(wallet.AccountNumber).SendAsync("TransactionProcessed", new
+                {
+                    WalletId = wallet.Id,
+                    AccountNumber = wallet.AccountNumber,
+                    Amount = request.Amount,
+                    NewBalance = wallet.AvailableFunds,
+                    Timestamp = transactionEvent.Timestamp
+                });
+
+                return Ok(new { Message = "Deposit successful.", NewBalance = wallet.AvailableFunds });
+            }
+            catch (DbUpdateConcurrencyException) 
+            {
+                // Handle race conditions where the wallet was updated by another thread simultaneously
+                return Conflict("A concurrent update occurred. Please try again.");
+            }
+            catch (Exception ex) 
+            {
+                // Log the exception and return a generic error to avoid leaking system details
+                return StatusCode(500, "An internal server error occurred while processing the deposit.");
+            }
         }
 
-        // 3. Docker Health Check
+        //Transaction History for specific wallet
+        [HttpGet("getHistory/{walletId}")]
+        public async Task<IActionResult> GetHistory(int walletId)
+        {
+            var history = await _context.Transactions.Where(a => a.WalletId == walletId).OrderByDescending(a => a.Timestamp).ToListAsync();
+
+            if(history.Any())
+            {
+                return Ok(history);
+            }
+
+            var walletExists = await _context.Wallets.AnyAsync(w => w.Id == walletId);
+    
+            //In case there's no history we are making sure if either the wallet exists or it's there's no history transaction data
+            if (!walletExists) 
+            {
+                return NotFound($"Wallet with ID {walletId} not found.");
+            }
+
+            return Ok(history);
+        }
+
+        // Docker Health Check
         [HttpGet("health")]
         public IActionResult HealthCheck()
         {
